@@ -3,6 +3,9 @@
 #include <stdlib.h>
 #include "aes_implementation.h"
 
+
+
+
 int main(int argc, char *argv[]) {
     if (argc != 5) {
         printf("Usage: %s <input_file> <-d or -e> <output_file> <algorithm>\n", argv[0]);
@@ -44,16 +47,13 @@ int main(int argc, char *argv[]) {
             aes_encrypt_file(input_fp, output_file);
         } else if (method == 1) {
             // Decryption
-           // aes_decrypt_file(input_fp, output_file);
+           aes_decrypt_file(input_fp, output_file);
         } else {
             printf("Invalid method: %d\n", method);
             fclose(input_fp);
             exit(0);
         }
 }
-       
-
-
     fclose(input_fp);
     printf("Operation completed successfully.\n");
     return 0;
