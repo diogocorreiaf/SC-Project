@@ -1,0 +1,24 @@
+#ifndef AES_IMPLEMENTATION_H
+#define AES_IMPLEMENTATION_H
+
+#include <stdio.h>
+#include <stdint.h>
+#include "keys.h"
+#include "utils.h"
+
+// Encryption Functions
+void SubBytes(uint8_t state[4][4]);
+void ShiftRows(uint8_t state[4][4]);
+void MixColumns(uint8_t state[4][4]);
+void AddRoundKey(uint8_t state[4][4], const uint8_t *round_key);
+void aes_encrypt_block(const uint8_t *plaintext_block, const uint8_t *key, uint8_t *ciphertext_block);
+void aes_encrypt_file(FILE *input_fp, const char *output_file);
+
+// Decryption Functions
+void InvSubBytes(uint8_t state[4][4]);
+void InvShiftRows(uint8_t state[4][4]);
+void InvMixColumns(uint8_t state[4][4]);
+void key_expansion_decrypt(const uint8_t *last_round_key, uint8_t *expanded_key, const uint8_t sbox[256], const uint8_t inv_sbox[256], const uint8_t Rcon[10]);
+void aes_decrypt_block(const uint8_t *ciphertext_block, const uint8_t *last_round_key, uint8_t *plaintext_block);
+void aes_decrypt_file(FILE *input_fp, const char *output_file);
+#endif /* AES_IMPLEMENTATION_H */

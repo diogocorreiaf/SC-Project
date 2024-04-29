@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "string.h": "c",
+        "aes_implementation.h": "c",
+        "utils.h": "c",
+        "keys.h": "c"
+    }
+}
