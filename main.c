@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include "aes_implementation.h"
+#include "blowfish_implementation.h"
 
 
 
@@ -40,7 +41,7 @@ int main(int argc, char *argv[]) {
     }
 
     // Check the algorithm 
-    
+        // AES
     if(strcmp(algorithm, "AES") == 0 ) {
         if (method == 0) {
             // Encryption
@@ -53,7 +54,23 @@ int main(int argc, char *argv[]) {
             fclose(input_fp);
             exit(0);
         }
-}
+    }
+
+       // Blowfish
+    if(strcmp(algorithm, "blowfish") == 0 ) {
+        if (method == 0) {
+            // Encryption
+            blowfish_encrypt_file(input_fp, output_file);
+        } else if (method == 1) {
+            // Decryption
+           //aes_decrypt_file(input_fp, output_file);
+        } else {
+            printf("Invalid method: %d\n", method);
+            fclose(input_fp);
+            exit(0);
+        }
+    }
+
     fclose(input_fp);
     printf("Operation completed successfully.\n");
     return 0;

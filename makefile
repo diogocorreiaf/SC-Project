@@ -5,13 +5,13 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic
 
 # Source files
-SRCS = main.c keys.c aes_implementation.c utils.c
+SRCS = main.c keys.c aes_implementation.c utils.c blowfish_implementation.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)
 
 # Target executable
-TARGET = aes_program
+TARGET = ScProject.exe
 
 # Rule to compile source files into object files
 %.o: %.c
@@ -23,4 +23,4 @@ $(TARGET): $(OBJS)
 
 # Clean rule to remove object files and the executable
 clean:
-	rm -f $(OBJS) $(TARGET)
+	del /Q $(OBJS) $(TARGET)

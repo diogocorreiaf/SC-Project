@@ -40,3 +40,17 @@ void initialize_inverse_aes_sbox(uint8_t inv_sbox[256]) {
 uint8_t xtime(uint8_t x) {
     return (x & 0x80) ? ((x << 1) ^ 0x1B) : (x << 1);
 }
+char* xor(char *a, char *b) {
+    // Convert hexadecimal strings to binary
+    unsigned long long int bin_a = strtoull(a, NULL, 16);
+    unsigned long long int bin_b = strtoull(b, NULL, 16);
+    
+    // XOR the binary values
+    unsigned long long int result = bin_a ^ bin_b;
+    
+    // Convert the result back to hexadecimal
+    static char ans[9];
+    sprintf(ans, "%08llx", result);
+    
+    return ans;
+}

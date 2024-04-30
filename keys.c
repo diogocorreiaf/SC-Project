@@ -3,8 +3,42 @@
 #include <time.h>
 #include "keys.h"
 
+#define BLOWFISH_MIN_KEY_SIZE_BYTES 4 
+#define BLOWFISH_MAX_KEY_SIZE_BYTES 56 
 #define AES_KEY_SIZE 16
 #define ROTL8(x,shift) ((uint8_t) ((x) << (shift)) | ((x) >> (8 - (shift))))
+
+
+void blowfish_key_gen(const char *filename) {
+    FILE *key_file = fopen(filename, "wb");
+    if (key_file == NULL) {
+        perror("Error opening key file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Seed the random number generator
+    srand(time(NULL));
+
+    // Generate random key size within the range
+    int key_size = BLOWFISH_MIN_KEY_SIZE_BYTES +
+                   rand() % (BLOWFISH_MAX_KEY_SIZE_BYTES - BLOWFISH_MIN_KEY_SIZE_BYTES + 1);
+
+    // Write key size to file
+    fwrite(&key_size, sizeof(int), 1, key_file);
+
+    // Generate random key
+    uint8_t key[key_size];
+    for (int i = 0; i < key_size; i++) {
+        key[i] = rand() % 256;
+    }
+
+    // Write key to file
+    fwrite(key, 1, key_size, key_file);
+
+    // Close the file
+    fclose(key_file);
+}
+
 
 void aes_key_gen(const char *filename) {
     FILE *key_file = fopen(filename, "wb");
@@ -23,6 +57,8 @@ void aes_key_gen(const char *filename) {
     fwrite(key, 1, AES_KEY_SIZE, key_file);
     fclose(key_file);
 }
+
+
 
 void aes_key_expansion(const uint8_t *input_key, uint8_t *expanded_key, const uint8_t sbox[256], const uint8_t Rcon[10]) {
     const int Nk = AES_KEY_SIZE / 4; // Number of 32-bit words in the key
