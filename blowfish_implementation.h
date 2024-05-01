@@ -13,11 +13,7 @@
 
 
 // Encryption
-/*void sub_key_gen(const char *key);
-void block_to_halves(const char *block, uint32_t *left, uint32_t *right);
-void halves_to_block(uint32_t left, uint32_t right, char *block);
-void feistel_round(uint32_t *left, uint32_t *right, uint32_t round_key);
-char *encrypt(const char *plaintext);*/
+
 void blowfish_encrypt_file(FILE *input_file, const char *output_file);
 void blowfish_decrypt_file(FILE *input_file, const char *output_file);
 uint32_t 

@@ -1,8 +1,5 @@
-
-
 #include "utils.h"
 #include "blowfish_implementation.h"
-#define KEY       "aabb09182736ccdd"
 
 
 uint32_t blowfish_Sbox[4][256] = {
@@ -354,15 +351,6 @@ void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
     blowfish_init(key, key_size);
     uint8_t *encrypted = blowfish_encrypt(data, Psize);
 
-    FILE *padsize_fp = fopen("Padsize.txt", "w");
-    if (padsize_fp == NULL) {
-        perror("Error opening padsize file");
-        exit(1);
-    }
-    fprintf(padsize_fp, "%ld", Psize-file_size);
-    fclose(padsize_fp);
-
-
     FILE *output_fp = fopen(output_file, "wb");
     if (output_fp == NULL) {
         perror("Error opening output file");
@@ -422,19 +410,8 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
     // Read encrypted data from input file
     fread(encrypted_data, sizeof(uint8_t), file_size, input_file);
     fclose(input_file);
+    
 
-    // Open padsize file for reading
-    FILE *padsize_fp = fopen("Padsize.txt", "r");
-    if (padsize_fp == NULL) {
-        perror("Error opening padsize file");
-        exit(1);
-    }
-    int padsize;
-    if (fscanf(padsize_fp, "%d", &padsize) != 1) {
-        fprintf(stderr, "Error reading padsize from file");
-        exit(1);
-    }
-    fclose(padsize_fp);
     blowfish_init(key, key_size);
 
     uint8_t *decrypted_data = blowfish_decrypt(encrypted_data, file_size);
@@ -445,6 +422,19 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
         perror("Error opening output file");
         exit(1);
     }
+
+    // Infer padding size based on the decrypted data
+    int padsize = 0;
+    uint8_t last_byte = decrypted_data[file_size - 1];
+    for (int i = file_size - 1; i >= 0; i--) {
+        if (decrypted_data[i] == last_byte) {
+            padsize++;
+        } else {
+            // If we encounter a byte with a different value, stop counting
+            break;
+        }
+    }
+
     // Write decrypted data to output file
     fwrite(decrypted_data, sizeof(uint8_t), file_size-padsize, output_fp);
     fclose(output_fp);
