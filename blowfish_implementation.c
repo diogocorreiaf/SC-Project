@@ -284,12 +284,6 @@ uint8_t * blowfish_encrypt(uint8_t data[], int padsize)
 uint8_t *
 blowfish_decrypt(uint8_t crypt_data[], int padsize)
 {
-    printf("crypt_data before decryption:\n");
-    for (int i = 0; i < padsize; ++i) {
-        printf("%.2X ", crypt_data[i]);
-    }
-    printf("\n");
-    printf("\nPadding is :%d\n",padsize);
 	uint8_t *decrypted = malloc(sizeof *decrypted * padsize);
 	uint8_t byte;
 	uint32_t i, j, index = 0;
@@ -314,7 +308,6 @@ blowfish_decrypt(uint8_t crypt_data[], int padsize)
 		printf("Decrypted chunk at index %u: %016lX\n", i, chunk);
 		memmove(decrypted + i, &chunk, sizeof(chunk));
 	}
-    printf("Decrypted data: %s\n", decrypted);
 	return decrypted;
 }
 
@@ -375,7 +368,7 @@ void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
         perror("Error opening padsize file");
         exit(1);
     }
-    fprintf(padsize_fp, "%d", Psize);
+    fprintf(padsize_fp, "%d", Psize-file_size);
     fclose(padsize_fp);
 
 
@@ -460,10 +453,9 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
     }
     fclose(padsize_fp);
     blowfish_init(key, KPsize);
+
     uint8_t *decrypted_data = blowfish_decrypt(encrypted_data, file_size);
 
-
-    printf("file_size is:%ld\n", file_size);
     // Open output file for writing
     FILE *output_fp = fopen(output_file, "wb");
     if (output_fp == NULL) {
@@ -471,7 +463,7 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
         exit(1);
     }
     // Write decrypted data to output file
-    fwrite(decrypted_data, sizeof(uint8_t), file_size, output_fp);
+    fwrite(decrypted_data, sizeof(uint8_t), file_size-padsize, output_fp);
     fclose(output_fp);
 
     // Free allocated memory
