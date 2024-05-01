@@ -305,14 +305,16 @@ blowfish_decrypt(uint8_t crypt_data[], int padsize)
 		chunk = 0x0000000000000000;
 		chunk |= left; chunk <<= 32;
 		chunk |= right;
-		printf("Decrypted chunk at index %u: %016lX\n", i, chunk);
 		memmove(decrypted + i, &chunk, sizeof(chunk));
 	}
 	return decrypted;
 }
 
 void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
-    /*int key_size;
+
+    blowfish_key_gen("BlowfishKey.txt");
+    
+    int key_size;
     FILE *key_fp = fopen("BlowfishKey.txt", "rb");
     if (key_fp == NULL) {
         perror("Error opening key file");
@@ -331,17 +333,7 @@ void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
     printf("\n");
 
     fclose(key_fp);
-        */
-
-    uint8_t key[56];
-    int KOsize, KPsize, KPbyte;
-    strncpy(key, KEY, sizeof(key));
-
-    KOsize = strlen(key);
-    KPsize = ceil(KOsize / 8.0) * 8;
-    KPbyte = KPsize - KOsize;
-	memset(key + KOsize, KPbyte, sizeof *key * KPbyte);
-
+        
     fseek(input_file, 0, SEEK_END);
     long file_size = ftell(input_file);
     rewind(input_file);
@@ -353,14 +345,13 @@ void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
     }
 
     fread(data, sizeof(uint8_t), file_size, input_file);
-    printf("ORIGINAL FILE SIZE: %ld\n", file_size);
 
     // Padding
     int Psize = ceil((double)file_size / 8.0) * 8;
     int Pbyte = Psize - file_size;
     memset(data + file_size, Pbyte, Pbyte);
 
-    blowfish_init(key, KPsize);
+    blowfish_init(key, key_size);
     uint8_t *encrypted = blowfish_encrypt(data, Psize);
 
     FILE *padsize_fp = fopen("Padsize.txt", "w");
@@ -368,7 +359,7 @@ void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
         perror("Error opening padsize file");
         exit(1);
     }
-    fprintf(padsize_fp, "%d", Psize-file_size);
+    fprintf(padsize_fp, "%ld", Psize-file_size);
     fclose(padsize_fp);
 
 
@@ -402,7 +393,7 @@ _decrypt(uint32_t *left, uint32_t *right)
 }
 void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
     // Read key from BlowfishKey.txt
-   /* int key_size;
+    int key_size;
     FILE *key_fp = fopen("BlowfishKey.txt", "rb");
     if (key_fp == NULL) {
         perror("Error opening key file");
@@ -414,15 +405,7 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
     fread(key, sizeof(uint8_t), key_size, key_fp);
     fclose(key_fp);
 
-*/
-    // Read key from BlowfishKey.txt and initialize key
-    uint8_t key[56];
-    strncpy(key, KEY, sizeof(key)); // Assuming KEY is defined elsewhere
 
-    int KOsize = strlen(key);
-    int KPsize = ceil(KOsize / 8.0) * 8;
-    int KPbyte = KPsize - KOsize;
-    memset(key + KOsize, KPbyte, sizeof *key * KPbyte);
 
     // Get size of input file
     fseek(input_file, 0, SEEK_END);
@@ -452,7 +435,7 @@ void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
         exit(1);
     }
     fclose(padsize_fp);
-    blowfish_init(key, KPsize);
+    blowfish_init(key, key_size);
 
     uint8_t *decrypted_data = blowfish_decrypt(encrypted_data, file_size);
 
