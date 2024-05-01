@@ -51,3 +51,13 @@ char* xor(char *a, char *b) {
     
     return ans;
 }
+
+char *xor_strings(const char *str1, const char *str2) {
+    size_t len = strlen(str1);
+    char *result = malloc(len + 1);
+    for (size_t i = 0; i < len; i++) {
+        result[i] = str1[i] ^ str2[i];
+    }
+    result[len] = '\0';
+    return result;
+}

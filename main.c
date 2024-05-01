@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
             blowfish_encrypt_file(input_fp, output_file);
         } else if (method == 1) {
             // Decryption
-           //aes_decrypt_file(input_fp, output_file);
+           blowfish_decrypt_file(input_fp, output_file);
         } else {
             printf("Invalid method: %d\n", method);
             fclose(input_fp);

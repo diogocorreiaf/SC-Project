@@ -11,4 +11,6 @@ void initialize_inverse_aes_sbox(uint8_t inv_sbox[256]);
 uint8_t xtime(uint8_t x);
 char* xor(char *a, char *b);
 char *valueOf(char digit);
+
+
 #endif 
