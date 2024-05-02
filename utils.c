@@ -61,3 +61,57 @@ char *xor_strings(const char *str1, const char *str2) {
     result[len] = '\0';
     return result;
 }
+
+
+bool coprime_check(uint16_t num1, uint32_t num2){
+    
+    for (uint16_t i = num1; i > 0; i--)
+	{
+		if (num1 % i == 0 && num2 % i == 0)
+			return true;
+	}
+
+    return false;
+}
+
+bool primenumber(uint16_t  number) { 
+    int i;  
+    for (i = 2; i <= number - 1; i++)  
+    { 
+        if (number % i == 0) 
+            return false; 
+    } 
+    return true; 
+} 
+
+
+uint32_t modInverse(uint16_t e, uint32_t phi) {
+    int x, y;
+    int g = gcdExtended(e, phi, &x, &y);
+    if (g != 1)
+        return 0;
+    else {
+        return (uint32_t)((x % phi + phi) % phi);
+    }
+}
+
+// Function for extended Euclidean Algorithm
+int gcdExtended(int a, int b, int* x, int* y) {
+    if (a == 0) {
+        *x = 0, *y = 1;
+        return b;
+    }
+    int x1, y1;
+    int gcd = gcdExtended(b % a, a, &x1, &y1);
+    *x = y1 - (b / a) * x1;
+    *y = x1;
+
+    return gcd;
+}
+
+unsigned long long int crt_function(uint16_t i, uint32_t d){
+unsigned long long int d_2;
+    
+    d_2 = d % (i - 1);
+    return d_2;
+}

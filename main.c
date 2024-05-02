@@ -3,6 +3,7 @@
 #include <stdlib.h>
 #include "aes_implementation.h"
 #include "blowfish_implementation.h"
+#include "rsa_implementation.h"
 
 
 
@@ -22,7 +23,7 @@ int main(int argc, char *argv[]) {
     char *output_file = argv[3];
     char *algorithm = argv[4];
 
-    // Parameter validation
+    // Input File Validation
     FILE *input_fp = fopen(input_file, "rb");
     if (input_fp == NULL) {
         perror("Error opening input file");
@@ -70,6 +71,22 @@ int main(int argc, char *argv[]) {
             exit(0);
         }
     }
+
+        // RSA
+    if(strcmp(algorithm, "RSA") == 0 ) {
+        if (method == 0) {
+            // Encryption
+            rsa_encrypt_file(input_fp, output_file);
+        } else if (method == 1) {
+            // Decryption
+           rsa_decrypt_file(input_fp, output_file);
+        } else {
+            printf("Invalid method: %d\n", method);
+            fclose(input_fp);
+            exit(0);
+        }
+    }
+
 
     fclose(input_fp);
     printf("Operation completed successfully.\n");

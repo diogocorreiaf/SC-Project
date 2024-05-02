@@ -7,6 +7,7 @@
 #include <Windows.h>
 #include <math.h>
 #include "keys.h"
+#include "utils.h"
 
 
 #define SWAP(x, y, temp) {temp = (x); (x) = (y); (y) = temp;}

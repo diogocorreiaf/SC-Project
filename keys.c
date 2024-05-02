@@ -1,12 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <time.h>
 #include "keys.h"
 
 #define BLOWFISH_MIN_KEY_SIZE_BYTES 4 
 #define BLOWFISH_MAX_KEY_SIZE_BYTES 56 
 #define AES_KEY_SIZE 16
 #define ROTL8(x,shift) ((uint8_t) ((x) << (shift)) | ((x) >> (8 - (shift))))
+#define MAX_VALUE 65535 
 
 
 void blowfish_key_gen(const char *filename) {
@@ -102,4 +100,53 @@ void aes_key_expansion(const uint8_t *input_key, uint8_t *expanded_key, const ui
             expanded_key[i * 4 + j] = expanded_key[(i - Nk) * 4 + j] ^ temp[j];
         }
     }
+}
+
+void obtain_p_q(uint16_t *p, uint16_t *q) {
+    srand(time(NULL)); 
+
+    do {
+        *p = rand() % MAX_VALUE + 5;
+    } while (!primenumber(*p));
+
+    do {
+        *q = rand() % MAX_VALUE + 5;
+    } while (!primenumber(*q) || *p == *q);
+}
+
+
+void rsa_key_gen(){
+    uint16_t e = 3;
+    uint16_t p, q;
+    uint32_t n, phi, d;
+
+    FILE *public_key_file = fopen("public_key.txt", "w");
+    FILE *private_key_file = fopen("private_key.txt", "w");
+    FILE *p_q_file = fopen("p_q_file.txt", "w");
+
+    srand(time(NULL));
+        // loop until the conditions for the values are met 
+    do{
+        //obtain p and q 
+        obtain_p_q(&p, &q);
+        n = p * q;
+        phi = n - p - q + 1;
+    }while (coprime_check(e,phi) != 1); 
+    
+
+    d = modInverse(e,phi);
+
+    // Write Keys to files  
+    printf("%" PRIu32 ", %" PRIu16 "\n", n, e);
+    printf("%" PRIu32 ", %" PRIu32 "\n", n, d);
+    printf("%" PRIu16 ", %" PRIu16"\n", p, q);
+
+
+
+    fprintf(public_key_file, "%" PRIu32 ", %" PRIu16 "\n", n, e);
+    fprintf(private_key_file, "%" PRIu32 ", %" PRIu32 "\n", n, d);
+    fprintf(p_q_file, "%" PRIu16 ", %" PRIu16"\n", p, q);
+    fclose(public_key_file);
+    fclose(private_key_file);
+    fclose(p_q_file);
 }

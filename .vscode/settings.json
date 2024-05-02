@@ -6,6 +6,9 @@
         "aes_implementation.h": "c",
         "utils.h": "c",
         "keys.h": "c",
-        "blowfish_implementation.h": "c"
+        "blowfish_implementation.h": "c",
+        "rsa_implementation.h": "c",
+        "stdbool.h": "c",
+        "time.h": "c"
     }
 }

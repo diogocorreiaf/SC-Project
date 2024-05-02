@@ -5,7 +5,7 @@ CC = gcc
 CFLAGS = -Wall -Wextra -Wpedantic
 
 # Source files
-SRCS = main.c keys.c aes_implementation.c utils.c blowfish_implementation.c
+SRCS = main.c keys.c aes_implementation.c utils.c blowfish_implementation.c rsa_implementation.c
 
 # Object files
 OBJS = $(SRCS:.c=.o)
@@ -31,3 +31,4 @@ keys.o: keys.c keys.h
 aes_implementation.o: aes_implementation.c aes_implementation.h
 utils.o: utils.c utils.h
 blowfish_implementation.o: blowfish_implementation.c blowfish_implementation.h utils.h
+rsa_implementation.o: rsa_implementation.c rsa_implementation.h
