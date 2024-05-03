@@ -63,84 +63,24 @@ char *xor_strings(const char *str1, const char *str2) {
 }
 
 
-bool coprime_check(uint16_t num1, uint32_t num2){
-    
-    for (uint16_t i = num1; i > 0; i--)
-	{
-		if (num1 % i == 0 && num2 % i == 0)
-			return true;
-	}
-
-    return false;
+void compute_phi(mpz_t phi, mpz_t p, mpz_t q) {
+    mpz_sub_ui(p, p, 1);
+    mpz_sub_ui(q, q, 1);
+    mpz_mul(phi, p, q); 
 }
 
-bool primenumber(uint16_t  number) { 
-    int i;  
-    for (i = 2; i <= number - 1; i++)  
-    { 
-        if (number % i == 0) 
-            return false; 
-    } 
-    return true; 
-} 
+void compute_mod_inverse(mpz_t d, mpz_t e, mpz_t phi) {
+    mpz_invert(d, e, phi);
+}
 
+void strrev(char* str) {
+    if (str == NULL)
+        return;
 
-uint32_t modInverse(uint16_t e, uint32_t phi) {
-    int x, y;
-    int g = gcdExtended(e, phi, &x, &y);
-    if (g != 1)
-        return 0;
-    else {
-        return (uint32_t)((x % phi + phi) % phi);
+    int length = strlen(str);
+    for (int i = 0; i < length / 2; ++i) {
+        char temp = str[i];
+        str[i] = str[length - i - 1];
+        str[length - i - 1] = temp;
     }
-}
-
-// Function for extended Euclidean Algorithm
-int gcdExtended(int a, int b, int* x, int* y) {
-    if (a == 0) {
-        *x = 0, *y = 1;
-        return b;
-    }
-    int x1, y1;
-    int gcd = gcdExtended(b % a, a, &x1, &y1);
-    *x = y1 - (b / a) * x1;
-    *y = x1;
-
-    return gcd;
-}
-
-unsigned long long int crt_function(uint16_t i, uint32_t d){
-unsigned long long int d_2;
-    
-    d_2 = d % (i - 1);
-    return d_2;
-}
-
-
-
-uint32_t extendedEuclidean(uint32_t a, uint32_t b, int32_t *x, int32_t *y) {
-    if (b == 0) {
-        *x = 1;
-        *y = 0;
-        return a;
-    }
-
-    int32_t x1, y1;
-    uint32_t gcd = extendedEuclidean(b, a % b, &x1, &y1);
-
-    *x = y1;
-    *y = x1 - (a / b) * y1;
-
-    return gcd;
-}
-
-uint32_t findD(uint16_t e, uint32_t phi) {
-    int32_t x, y;
-    extendedEuclidean(phi, e, &x, &y);
-    
-    while (y < 0) {
-        y += phi;
-    }
-
-    return (uint32_t)y;
 }

@@ -9,6 +9,7 @@
         "blowfish_implementation.h": "c",
         "rsa_implementation.h": "c",
         "stdbool.h": "c",
-        "time.h": "c"
+        "time.h": "c",
+        "gmp.h": "c"
     }
 }

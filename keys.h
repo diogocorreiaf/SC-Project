@@ -8,7 +8,7 @@
 #include <stdbool.h>
 #include <inttypes.h>
 #include "utils.h"
-
+#include <gmp.h>
 
 void aes_key_gen(const char *filename);
 void aes_key_expansion(const uint8_t *input_key, uint8_t *expanded_key, const uint8_t sbox[256], const uint8_t Rcon[10]) ;

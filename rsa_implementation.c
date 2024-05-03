@@ -2,153 +2,113 @@
 
 
 
-unsigned long long int rsa_encrypt(int base, uint16_t power, uint32_t mod) {
-    unsigned long long int result = 1;
-    for (uint16_t i = 0; i < power; i++) {
-        result = (result * base) % mod;
-    }
-    return result;
-}
-
-
-
-int inverse(int a, int mod)  {
-        int aprev, iprev, i = 1, atemp, itemp;
-
-        aprev = mod, iprev = mod;
-        while (a != 1)
-        {
-                atemp = a;
-                itemp = i;
-                a = aprev - aprev / atemp * a;
-                i = iprev - aprev / atemp * i;
-                aprev = atemp;
-                iprev = itemp;
-                while (i < 0)
-                        i += mod;
-        }
-
-        return i;
-}
-
-
-unsigned long long int rsa_decrypt(unsigned long long int base, int power, int mod) {
-        int i;
-        unsigned long long int result = 1;
-        for (i = 0; i < power; i++)
-        {
-                result = (result * base) % mod;
-        }
-        return result;
-}
-
 void rsa_encrypt_file(FILE *input_fp, const char *output_file){
-    uint32_t n;
-    uint16_t e;
-    int i;
-
-    // Gen Key
+    char buffer[1024];
+    mpz_t n, e , message, cipher;
+    mpz_inits(n, e, message, cipher, NULL);
     rsa_key_gen();
 
     FILE *public_key_file = fopen("public_key.txt", "r");
     if (public_key_file == NULL) {
-        printf("Error opening public_key.txt\n");
-        return;
+        perror("Error opening public key file");
+        exit(EXIT_FAILURE);
     }
 
-    // Read public key components from file
-    if (fscanf(public_key_file, "%" SCNu32 ", %" SCNu16, &n, &e) != 2) {
-        printf("Error reading public key\n");
-        fclose(public_key_file);
-        return;
+    // Read the public key
+    if (gmp_fscanf(public_key_file, "%Zd\n%Zd\n", n, e) != 2) {
+        perror("Error reading public key from file");
+        exit(EXIT_FAILURE);
     }
 
-    printf("Public Key: (n, e) = (%" PRIu32 ", %" PRIu16 ")\n", n, e);
-
-    // Open Output File to Write
-    FILE *output_fp = fopen(output_file, "w");
-    if (output_fp == NULL) {
-        printf("Error opening %s\n", output_file);
-        return;
+    if (fgets(buffer, sizeof(buffer), input_fp) == NULL) {
+        perror("Error reading message from file");
+        exit(EXIT_FAILURE);
     }
 
-    while ((i = fgetc(input_fp)) != EOF) {
-        unsigned long long int encrypted_ch = rsa_encrypt(i, e, n);
-        fprintf(output_fp, "%llu\n", encrypted_ch);
+    fclose(input_fp);
+
+    for (size_t i = 0; i < strlen(buffer); i++) {
+        mpz_mul_ui(message, message, 256); 
+        mpz_add_ui(message, message, buffer[i]);
     }
+
+    mpz_powm(cipher, message, e, n);
+
+    FILE *cipher_file = fopen(output_file, "w");
+    if (cipher_file == NULL) {
+        perror("Error opening cipher file");
+        exit(EXIT_FAILURE);
+    }
+
+    // Write the cipher to the file
+    gmp_fprintf(cipher_file, "%Zd", cipher);
+
+    // Close the output file
+    fclose(cipher_file);
+    mpz_clears(n, e, message, cipher, NULL);
 }
 
 
 
 
 
+void rsa_decrypt_file(FILE *input_fp, const char *output_file){
+    char decrypted_text[1024];
+    size_t index = 0;
+    mpz_t n, d, cipher, decrypted_message;
+    mpz_inits( n, d, cipher,decrypted_message, NULL);
 
-void rsa_decrypt_file(FILE *input_fp, const char *output_file) {
-    int n, d, p, q, h, m, qInv, m1m2;
-    unsigned long long int c, dP, dQ, m1, m2;
-
+    
+    // Read the private key from the file
     FILE *private_key_file = fopen("private_key.txt", "r");
     if (private_key_file == NULL) {
-        printf("Error opening private_key.txt\n");
-        return;
+        perror("Error opening private key file");
+        exit(EXIT_FAILURE);
     }
 
-    // Read private key components from file
-    if (fscanf(private_key_file, "%d, %d", &n, &d) != 2) {
-        printf("Error reading private key\n");
-        fclose(private_key_file);
-        return;
-    }   
+    // Read the private key
+    if (gmp_fscanf(private_key_file, "%Zd\n%Zd\n", n, d) != 2) {
+        perror("Error reading private key from file");
+        exit(EXIT_FAILURE);
+    }
+    fclose(private_key_file);
 
-    printf("Private Key: (n, d) = (%d, %d)\n", n, d);
-    fclose(private_key_file);   
-
-    // Read prime numbers from file
-    FILE *p_q_file = fopen("p_q_file.txt", "r");
-    if (p_q_file == NULL) {
-        printf("Error opening p_q.txt\n");
-        return;
+    FILE *cipher_file = fopen("cipher.txt", "r");
+    if (cipher_file == NULL) {
+        perror("Error opening cipher file");
+        exit(EXIT_FAILURE);
     }
 
-    if (fscanf(p_q_file, "%d, %d", &p, &q) != 2) {
-        printf("Error reading prime numbers\n");
-        fclose(p_q_file);
-        return;
+    // Read the cipher from the file
+    if (gmp_fscanf(cipher_file, "%Zd", cipher) != 1) {
+        perror("Error reading cipher from file");
+        exit(EXIT_FAILURE);
     }
 
-    printf("p: %d, q: %d\n", p, q);
+    // Close the cipher file
+    fclose(cipher_file);
 
-    fclose(p_q_file);
+    mpz_powm(decrypted_message, cipher, d, n);
 
-    // Open output file to write
+    // Extract each character from the decrypted message
+    while (mpz_sgn(decrypted_message) > 0) {
+        mpz_tdiv_q_ui(decrypted_message, decrypted_message, 256); // Divide by 256 to extract the next character
+        decrypted_text[index++] = mpz_get_ui(decrypted_message) & 0xFF; // Get the lowest byte (ASCII value of the character)
+    }
+
+    decrypted_text[index] = '\0';
+    strrev(decrypted_text);
+    
     FILE *output_fp = fopen(output_file, "w");
-    if (output_fp == NULL) {
-        printf("Error opening %s\n", output_file);
-        return;
+    if (cipher_file == NULL) {
+        perror("Error opening cipher file");
+        exit(EXIT_FAILURE);
     }
 
+    // Write the cipher to the file
+    gmp_fprintf(output_fp, "%Zd", cipher);
 
-
-    while (fscanf(input_fp, "%llu", &c) != EOF) {
-        dP = crt_function(p, d);
-        dQ = crt_function(q, d);
-        qInv = inverse(q, p);
-        m1 = rsa_decrypt(c, dP, p);
-        m2 = rsa_decrypt(c, dQ, q);
-        m1m2 = m1 - m2;
-        if (m1m2 < 0)
-            m1m2 += p;
-        h = (qInv * m1m2) % p;
-        m = m2 + h * q;
-
-        // Write decrypted message to output file
-        fprintf(output_fp, "%c", m);
-    }
-
-
-
-    // Close output file
+    // Close the output file
     fclose(output_fp);
-
-    printf("Decryption complete. Decrypted message written to %s\n", output_file);
+    mpz_clears(n, d,cipher, decrypted_message, NULL);
 }
