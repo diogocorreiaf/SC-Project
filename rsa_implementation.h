@@ -10,5 +10,6 @@
 
 void rsa_encrypt_file(FILE *input_fp, const char *output_file);
 void rsa_decrypt_file(FILE *input_fp, const char *output_file);
-
+unsigned long long int rsa_encrypt(int base, uint16_t power, uint32_t mod);
+unsigned long long int rsa_decrypt(unsigned long long int base, int power, int mod);
 #endif 

@@ -18,5 +18,7 @@ uint32_t modInverse(uint16_t e, uint32_t phi);
 int gcdExtended(int a, int b, int* x, int* y); 
 bool primenumber(uint16_t  number);
 unsigned long long int crt_function(uint16_t i, uint32_t d);
+uint32_t findD(uint16_t e, uint32_t phi);
+uint32_t extendedEuclidean(uint32_t a, uint32_t b, int32_t *x, int32_t *y);
 
 #endif 

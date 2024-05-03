@@ -247,8 +247,8 @@ uint8_t * blowfish_encrypt(uint8_t data[], int padsize)
 {
 	uint8_t *encrypted = malloc(sizeof *encrypted * padsize);
 	uint8_t byte;
-	uint32_t i, j, index = 0;
-	uint32_t left, right, datasize, factor;
+	uint32_t i;
+	uint32_t left, right, datasize;
 	uint64_t chunk;
 	
 	datasize = padsize;

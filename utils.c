@@ -115,3 +115,32 @@ unsigned long long int d_2;
     d_2 = d % (i - 1);
     return d_2;
 }
+
+
+
+uint32_t extendedEuclidean(uint32_t a, uint32_t b, int32_t *x, int32_t *y) {
+    if (b == 0) {
+        *x = 1;
+        *y = 0;
+        return a;
+    }
+
+    int32_t x1, y1;
+    uint32_t gcd = extendedEuclidean(b, a % b, &x1, &y1);
+
+    *x = y1;
+    *y = x1 - (a / b) * y1;
+
+    return gcd;
+}
+
+uint32_t findD(uint16_t e, uint32_t phi) {
+    int32_t x, y;
+    extendedEuclidean(phi, e, &x, &y);
+    
+    while (y < 0) {
+        y += phi;
+    }
+
+    return (uint32_t)y;
+}

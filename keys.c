@@ -115,6 +115,10 @@ void obtain_p_q(uint16_t *p, uint16_t *q) {
 }
 
 
+
+
+
+
 void rsa_key_gen(){
     uint16_t e = 3;
     uint16_t p, q;
@@ -134,7 +138,7 @@ void rsa_key_gen(){
     }while (coprime_check(e,phi) != 1); 
     
 
-    d = modInverse(e,phi);
+    d = findD(e,phi);
 
     // Write Keys to files  
     printf("%" PRIu32 ", %" PRIu16 "\n", n, e);

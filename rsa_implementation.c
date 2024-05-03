@@ -11,8 +11,28 @@ unsigned long long int rsa_encrypt(int base, uint16_t power, uint32_t mod) {
 }
 
 
-unsigned long long int rsa_decrypt(unsigned long long int base, int power, int mod)
-{
+
+int inverse(int a, int mod)  {
+        int aprev, iprev, i = 1, atemp, itemp;
+
+        aprev = mod, iprev = mod;
+        while (a != 1)
+        {
+                atemp = a;
+                itemp = i;
+                a = aprev - aprev / atemp * a;
+                i = iprev - aprev / atemp * i;
+                aprev = atemp;
+                iprev = itemp;
+                while (i < 0)
+                        i += mod;
+        }
+
+        return i;
+}
+
+
+unsigned long long int rsa_decrypt(unsigned long long int base, int power, int mod) {
         int i;
         unsigned long long int result = 1;
         for (i = 0; i < power; i++)
@@ -112,7 +132,7 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file) {
     while (fscanf(input_fp, "%llu", &c) != EOF) {
         dP = crt_function(p, d);
         dQ = crt_function(q, d);
-        qInv = modInverse(q, p);
+        qInv = inverse(q, p);
         m1 = rsa_decrypt(c, dP, p);
         m2 = rsa_decrypt(c, dQ, q);
         m1m2 = m1 - m2;
