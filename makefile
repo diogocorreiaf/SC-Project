@@ -13,17 +13,23 @@ OBJS = $(SRCS:.c=.o)
 # Target executable
 TARGET = ScProject.exe
 
+# Include directory for GMP
+GMP_INCLUDE = -I/path/to/gmp/include
+
+# Libraries needed for GMP and math functions
+LIBS = -L/path/to/gmp/lib -lgmp -lm
+
 # Rule to compile source files into object files
 %.o: %.c
-	$(CC) $(CFLAGS) -c $< -o $@
+	$(CC) $(CFLAGS) $(GMP_INCLUDE) -c $< -o $@
 
 # Rule to link object files into the target executable
 $(TARGET): $(OBJS)
-	$(CC) $(OBJS) -o $(TARGET)
+	$(CC) $(OBJS) $(LIBS) -o $(TARGET)
 
 # Clean rule to remove object files and the executable
 clean:
-	del /Q $(OBJS) $(TARGET)
+	rm -f $(OBJS) $(TARGET)
 
 # Dependencies
 main.o: main.c blowfish_implementation.h

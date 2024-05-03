@@ -84,3 +84,21 @@ void strrev(char* str) {
         str[length - i - 1] = temp;
     }
 }
+
+void generate_large_primes(mpz_t p, mpz_t q, int bits) {
+    gmp_randstate_t state;
+    gmp_randinit_default(state);
+    unsigned long seed = time(NULL);
+    gmp_randseed_ui(state, seed);
+
+    // Generate first prime p
+    mpz_urandomb(p, state, bits / 2);
+    mpz_setbit(p, bits / 2 - 1);
+    mpz_nextprime(p, p);
+
+    mpz_urandomb(q, state, bits / 2);
+    mpz_setbit(q, bits / 2 - 1);
+    mpz_nextprime(q, q);
+
+    gmp_randclear(state);
+}

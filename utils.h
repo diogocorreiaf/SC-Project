@@ -18,4 +18,5 @@ char *valueOf(char digit);
 void compute_mod_inverse(mpz_t d, mpz_t e, mpz_t phi);
 void compute_phi(mpz_t phi, mpz_t p, mpz_t q);
 void strrev(char* str);
+void generate_large_primes(mpz_t p, mpz_t q, int bits);
 #endif 

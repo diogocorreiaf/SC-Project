@@ -102,42 +102,37 @@ void aes_key_expansion(const uint8_t *input_key, uint8_t *expanded_key, const ui
     }
 }
 
-void obtain_p_q(uint16_t *p, uint16_t *q) {
-    srand(time(NULL)); 
-
-    do {
-        *p = rand() % MAX_VALUE + 5;
-    } while (!primenumber(*p));
-
-    do {
-        *q = rand() % MAX_VALUE + 5;
-    } while (!primenumber(*q) || *p == *q);
-}
-
-
-
-
-
-
 void rsa_key_gen(){
-    mpz_t p, q, n, phi, e, d;   
-    mpz_inits(p, q, n, phi, e, d);
-    mpz_set_ui(e, 65537);
-    int bits = 3330;
+    printf("STASRT OF KEY GEN\n");
+    mpz_t p_keygen, q_keygen, n_keygen, phi_keygen, e_keygen, d_keygen;   
+    printf("Declare vars\n");
+    mpz_inits(p_keygen, q_keygen, n_keygen, phi_keygen, e_keygen, d_keygen);
+    printf("init vars\n");
+    mpz_set_ui(e_keygen, 65537);
+    printf("Set UI\n");
+    int bits = 3330;    
 
+    printf("Before prime ggen\n");
+    generate_large_primes(p_keygen, q_keygen, bits);
 
-    mpz_mul(n, p, q);
-       
-    compute_phi(phi, p, q);
-    compute_mod_inverse(d, e, phi);
+    mpz_mul(n_keygen, p_keygen, q_keygen);
+
+    printf("Before phi\n");
+    compute_phi(phi_keygen, p_keygen, q_keygen);
+
+    printf("Before mod inverse\n");
+    compute_mod_inverse(d_keygen, e_keygen, phi_keygen);
 
     FILE *public_key_file = fopen("public_key.txt", "w");
     FILE *private_key_file = fopen("private_key.txt", "w");
-
+    
+    printf("Before write to file\n");
     if (public_key_file && private_key_file) {
-        gmp_fprintf(public_key_file, "%Zd\n%Zd\n", n, e);
-        gmp_fprintf(private_key_file, "%Zd\n", d);
+        gmp_fprintf(public_key_file, "%Zd\n%Zd\n", n_keygen, e_keygen);
+        gmp_fprintf(private_key_file, "%Zd\n", d_keygen);
         fclose(public_key_file);
         fclose(private_key_file);
     }
+    printf("Before clear\n");
+    mpz_clears(p_keygen, q_keygen, n_keygen, phi_keygen, e_keygen, d_keygen, NULL);
 }
