@@ -1,6 +1,9 @@
 #include "blowfish_implementation.h"
 
 
+#define NUM_ROUNDS 16
+#define BLOCK_SIZE 8
+
 uint32_t blowfish_Sbox[4][256] = {
 {0xd1310ba6, 0x98dfb5ac, 0x2ffd72db, 0xd01adfb7, 0xb8e1afed, 0x6a267e96,
 0xba7c9045, 0xf12c7f99, 0x24a19947, 0xb3916cf7, 0x0801f2e2, 0x858efc16,
@@ -193,260 +196,234 @@ uint32_t blowfish_Pbox[18] = {
 0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5, 0xb5470917, 0x9216d5d9, 0x8979fb1b
 };
 
+// BLOWFISH F FUNCTION
+uint32_t F(uint32_t X) {
+    uint8_t a, b, c, d;
+    uint32_t Y;
 
+    d = X & 0x00FF;
+    X >>= 8;
+    c = X & 0x00FF;
+    X >>= 8;
+    b = X & 0x00FF;
+    X >>= 8;
+    a = X & 0x00FF;
 
-void blowfish_init(uint8_t key[], int size){
-	int keysize = size, i, j;
-	uint32_t left = 0x00000000, right = 0x00000000;
+    Y = (blowfish_Sbox[0][a] + blowfish_Sbox[1][b]) % 0x100;
+    Y ^= blowfish_Sbox[2][c];
+    Y += blowfish_Sbox[3][d];
 
-
-
-	for (i = 0; i < 18; i++) {
-		blowfish_Pbox[i] ^= ((uint32_t)key[(i + 0) % keysize] << 24) | 
-		           ((uint32_t)key[(i + 1) % keysize] << 16) | 
-		           ((uint32_t)key[(i + 2) % keysize] <<  8) | 
-		           ((uint32_t)key[(i + 3) % keysize]);
-	}
-
-    
-	for (i = 0; i <= 17; i += 2) {
-		_encrypt(&left, &right);
-		blowfish_Pbox[i]     = left;
-		blowfish_Pbox[i + 1] = right;
-	}
-
-	for (i = 0; i <= 3; i++) {
-		for (j = 0; j <= 254; j += 2) {
-			_encrypt(&left, &right);
-			blowfish_Sbox[i][j]     = left;
-			blowfish_Sbox[i][j + 1] = right;
-		}
-	}
+    return Y;
 }
 
 
-uint32_t feistel_function(uint32_t arg)
-{
-	uint32_t var = blowfish_Sbox[0][arg >> 24] + blowfish_Sbox[1][(uint8_t)(arg >> 16)];
-	return (var ^ blowfish_Sbox[2][(uint8_t)(arg >> 8)]) + blowfish_Sbox[3][(uint8_t)(arg)];
-}
+void blowfish_encrypt(uint32_t *xl, uint32_t *xr) {
+    uint32_t Xl = *xl;
+    uint32_t Xr = *xr;
+    uint32_t temp;
+    int i;
 
-void _encrypt(uint32_t *left, uint32_t *right)
-{
-	uint32_t i, t;
-	for (i = 0; i < 16; i++) {
-		*left  ^= blowfish_Pbox[i];
-		*right ^= feistel_function(*left);
-		
-		SWAP(*left, *right, t);
-	}
+    for (i = 0; i < 16; i++) {
+        Xl ^= blowfish_Pbox[i];
+        Xr ^= F(Xl);
+        temp = Xl;
+        Xl = Xr;
+        Xr = temp;
+    }
+    temp = Xl;
+    Xl = Xr;
+    Xr = temp;
+    Xr ^= blowfish_Pbox[16];
+    Xl ^= blowfish_Pbox[17];
 
-	SWAP(*left, *right, t);
-	*right  ^= blowfish_Pbox[16];
-	*left ^= blowfish_Pbox[17];
-}
-
-uint8_t * blowfish_encrypt(uint8_t data[], int padsize)
-{
-	uint8_t *encrypted = malloc(sizeof *encrypted * padsize);
-	uint8_t byte;
-	uint32_t i;
-	uint32_t left, right, datasize;
-	uint64_t chunk;
-	
-	datasize = padsize;
-
-	for (i = 0; i < datasize; i += 8) {
-		/* make 8 byte chunks */
-		chunk = 0x0000000000000000;
-		memmove(&chunk, data + i, sizeof(chunk)); 
-
-		/* split into two 4 byte chunks */
-		left = right = 0x00000000;
-		left   = (uint32_t)(chunk >> 32);
-		right  = (uint32_t)(chunk);
-
-		_encrypt(&left, &right);
-
-		/* merge encrypted halves into a single 8 byte chunk again */
-		chunk = 0x0000000000000000;
-		chunk |= left; chunk <<= 32;
-		chunk |= right;
-		
-		/* append the chunk into the answer */
-		memmove(encrypted + i, &chunk, sizeof(chunk));
-	}
-	return encrypted;
+    *xl = Xl;
+    *xr = Xr;
 }
 
 
-uint8_t *
-blowfish_decrypt(uint8_t crypt_data[], int padsize)
-{
-	uint8_t *decrypted = malloc(sizeof *decrypted * padsize);
-	uint8_t byte;
-	uint32_t i, j, index = 0;
-	uint32_t left, right, datasize, factor;
-	uint64_t chunk;
-	
-	datasize = padsize;
 
-	for (i = 0; i < datasize; i += 8) {
-		chunk = 0x0000000000000000;
-		memmove(&chunk, crypt_data + i, sizeof(chunk));
+void blowfish_decrypt(uint32_t *xl, uint32_t *xr) {
+    uint32_t Xl = *xl, Xr = *xr;
+    uint32_t temp;
 
-		left = right = 0x00000000;
-		left   = (uint32_t)(chunk >> 32);
-		right  = (uint32_t)(chunk);
+    for (int i = NUM_ROUNDS + 1; i > 1; --i) {
+        Xl ^= blowfish_Pbox[i];
+        Xr = F(Xl) ^ Xr;
 
-		_decrypt(&left, &right);
-
-		chunk = 0x0000000000000000;
-		chunk |= left; chunk <<= 32;
-		chunk |= right;
-		memmove(decrypted + i, &chunk, sizeof(chunk));
-	}
-	return decrypted;
-}
-
-void blowfish_encrypt_file(FILE *input_file, const char *output_file) {
-
-    blowfish_key_gen("BlowfishKey.txt");
-    
-    int key_size;
-    FILE *key_fp = fopen("BlowfishKey.txt", "rb");
-    if (key_fp == NULL) {
-        perror("Error opening key file");
-        exit(1);
+        // Swap Xl and Xr
+        temp = Xl;
+        Xl = Xr;
+        Xr = temp;
     }
 
-    fread(&key_size, sizeof(int), 1, key_fp);
-    printf("Key size read from file: %d\n", key_size);
+    // Swap Xl and Xr (undo the last swap)
+    temp = Xl;
+    Xl = Xr;
+    Xr = temp;
+
+    Xr ^= blowfish_Pbox[1];
+    Xl ^= blowfish_Pbox[0];
+
+    *xl = Xl;
+    *xr = Xr;
+}
+
+void encrypt_file(FILE *plaintext_file, FILE *ciphertext_file, size_t plaintext_size) {
+    uint8_t plaintext_buffer[BLOCK_SIZE];
+    uint8_t ciphertext_buffer[BLOCK_SIZE];
+
+    size_t bytes_left = plaintext_size;
+
+    while (bytes_left > 0) {
+        size_t bytes_to_read = (bytes_left >= BLOCK_SIZE) ? BLOCK_SIZE : bytes_left;
+        size_t bytes_read = fread(plaintext_buffer, 1, bytes_to_read, plaintext_file);
+
+        if (bytes_read < BLOCK_SIZE) {
+            memset(plaintext_buffer + bytes_read, 0, BLOCK_SIZE - bytes_read);
+        }
+
+        uint32_t xl = *((uint32_t *)plaintext_buffer);
+        uint32_t xr = *((uint32_t *)(plaintext_buffer + sizeof(uint32_t)));
+
+        blowfish_encrypt(&xl, &xr);
+
+        *((uint32_t *)ciphertext_buffer) = xl;
+        *((uint32_t *)(ciphertext_buffer + sizeof(uint32_t))) = xr;
+
+        fwrite(ciphertext_buffer, 1, BLOCK_SIZE, ciphertext_file);
+
+        bytes_left -= bytes_read;
+    }
+}
+
+// Perform Blowfish decryption on ciphertext
+void decrypt_file(FILE *ciphertext_file, FILE *decrypted_file, size_t ciphertext_size) {
+    uint8_t ciphertext_buffer[BLOCK_SIZE];
+    uint8_t decrypted_buffer[BLOCK_SIZE];
+
+    size_t bytes_left = ciphertext_size;
+
+    while (bytes_left > 0) {
+        size_t bytes_to_read = (bytes_left >= BLOCK_SIZE) ? BLOCK_SIZE : bytes_left;
+        size_t bytes_read = fread(ciphertext_buffer, 1, bytes_to_read, ciphertext_file);
+
+        uint32_t xl = *((uint32_t *)ciphertext_buffer);
+        uint32_t xr = *((uint32_t *)(ciphertext_buffer + sizeof(uint32_t)));
+
+        blowfish_decrypt(&xl, &xr);
+
+        *((uint32_t *)decrypted_buffer) = xl;
+        *((uint32_t *)(decrypted_buffer + sizeof(uint32_t))) = xr;
+
+        fwrite(decrypted_buffer, 1, bytes_read, decrypted_file);
+
+        bytes_left -= bytes_read;
+    }
+}
+
+
+void initializeBlowfish(const uint8_t *key, size_t key_length) {
+    int i, j;
+    uint32_t data = 0x00000000;
+    size_t key_index = 0;
+
+    /* XOR key with P-array */
+    for (i = 0; i < 18; i++) {
+        data = (data << 8) | key[key_index++];
+        if (key_index >= key_length)
+            key_index = 0;
+        blowfish_Pbox[i] ^= data;
+    }
+
+    uint32_t l = 0x00000000, r = 0x00000000;
+
+    /* Encrypt initial value with the Blowfish algorithm */
+    for (i = 0; i < 18; i += 2) {
+        blowfish_encrypt(&l, &r);
+        blowfish_Pbox[i] = l;
+        blowfish_Pbox[i + 1] = r;
+    }
+
+    /* Update S-boxes */
+    for (i = 0; i < 4; i++) {
+        for (j = 0; j < 256; j += 2) {
+            blowfish_encrypt(&l, &r);
+            blowfish_Sbox[i][j] = l;
+            blowfish_Sbox[i][j + 1] = r;
+        }
+    }
+}
+
+// Perform Blowfish encryption on plaintext
+void blowfish_encrypt_file(FILE *input_fp, const char *output_file) {    
+    int key_size;
+    // READING THE KEYS
+    blowfish_key_gen("BlowfishKey.bin");
+
+    FILE *key_file = fopen("BlowfishKey.bin", "rb");
+    if (key_file == NULL) {
+        perror("Error opening key file");
+    }
+    fread(&key_size, sizeof(int), 1, key_file);
 
     uint8_t key[key_size];
-    fread(key, sizeof(uint8_t), key_size, key_fp);
-    printf("Key read from file: ");
-    for (int i = 0; i < key_size; i++) {
-        printf("%.2X ", key[i]);
+    fread(key, 1, key_size, key_file);
+
+    fclose(key_file);
+    initializeBlowfish(key, key_size);  
+
+
+    fseek(input_fp, 0, SEEK_END);
+    size_t plaintext_size = ftell(input_fp);
+    fseek(input_fp, 0, SEEK_SET);
+
+    FILE *output_fp = fopen(output_file, "wb");
+    if (output_fp == NULL) {
+        perror("Failed to open ciphertext file for writing");
+        fclose(output_fp);
+    }
+
+    encrypt_file(input_fp, output_fp, plaintext_size);
+
+    fclose(output_fp);
+
+}
+
+// Perform Blowfish decryption on ciphertext
+void blowfish_decrypt_file(FILE *input_fp, const char *output_file) {
+    int key_size;
+    // Read key from key file
+    FILE *key_file = fopen("BlowfishKey.bin", "rb");
+    if (key_file == NULL) {
+        perror("Error opening key file");
+    }
+    fread(&key_size, sizeof(int), 1, key_file);
+
+    uint8_t key[key_size];
+    fread(key, 1, key_size, key_file);
+        for (int i = 0; i < key_size; i++) {
+        printf("%02x ", key[i]);
     }
     printf("\n");
 
-    fclose(key_fp);
-        
-    fseek(input_file, 0, SEEK_END);
-    long file_size = ftell(input_file);
-    rewind(input_file);
+    fclose(key_file);
+    initializeBlowfish(key, key_size);
 
-    uint8_t *data = (uint8_t *)malloc(file_size * sizeof(uint8_t));
-    if (data == NULL) {
-        perror("Error allocating memory for data");
-        exit(1);
-    }
+    // Determine ciphertext file size
+    fseek(input_fp, 0, SEEK_END);
+    size_t ciphertext_size = ftell(input_fp);
+    fseek(input_fp, 0, SEEK_SET);
 
-    fread(data, sizeof(uint8_t), file_size, input_file);
-
-    // PADDING THE MESSAGE 
-    int Psize = ceil((double)file_size / 8.0) * 8;
-    int Pbyte = Psize - file_size;
-    memset(data + file_size, Pbyte, Pbyte);
-
-    blowfish_init(key, key_size);
-    uint8_t *encrypted = blowfish_encrypt(data, Psize);
-
+    // Open file for decrypted plaintext writing
     FILE *output_fp = fopen(output_file, "wb");
     if (output_fp == NULL) {
-        perror("Error opening output file");
-        exit(1);
+        perror("Failed to open file for decrypted plaintext writing");
+        fclose(input_fp);
     }
 
-    fwrite(encrypted, sizeof(uint8_t), Psize, output_fp);
+    // Decrypt ciphertext file
+    decrypt_file(input_fp, output_fp, ciphertext_size);
 
+    // Close files
     fclose(output_fp);
-    free(data);
-    free(encrypted);
-}
-
-void
-_decrypt(uint32_t *left, uint32_t *right)
-{
-	uint32_t i, t;
-	for (i = 17; i > 1; i--) {
-		*left  ^= blowfish_Pbox[i];
-		*right ^= feistel_function(*left);
-
-		SWAP(*left, *right, t);
-	}
-
-	SWAP(*left, *right, t);
-	*right ^=  blowfish_Pbox[1];
-	*left  ^= blowfish_Pbox[0];
-}
-
-
-
-
-
-void blowfish_decrypt_file(FILE *input_file, const char *output_file) {
-    // Read key from BlowfishKey.txt
-    int key_size;
-    FILE *key_fp = fopen("BlowfishKey.txt", "rb");
-    if (key_fp == NULL) {
-        perror("Error opening key file");
-        exit(1);
-    }
-
-    fread(&key_size, sizeof(int), 1, key_fp);
-    uint8_t key[key_size];
-    fread(key, sizeof(uint8_t), key_size, key_fp);
-    fclose(key_fp);
-
-
-
-    // Get size of input file
-    fseek(input_file, 0, SEEK_END);
-    long file_size = ftell(input_file);
-    rewind(input_file);
-
-    // Allocate memory for encrypted data
-    uint8_t *encrypted_data = (uint8_t *)malloc(file_size * sizeof(uint8_t));
-    if (encrypted_data == NULL) {
-        perror("Error allocating memory for encrypted data");
-        exit(1);
-    }
-
-    // Read encrypted data from input file
-    fread(encrypted_data, sizeof(uint8_t), file_size, input_file);
-    fclose(input_file);
-    
-
-    blowfish_init(key, key_size);
-
-    uint8_t *decrypted_data = blowfish_decrypt(encrypted_data, file_size);
-
-    // Open output file for writing
-    FILE *output_fp = fopen(output_file, "wb");
-    if (output_fp == NULL) {
-        perror("Error opening output file");
-        exit(1);
-    }
-
-    // Infer padding size based on the decrypted data
-    int padsize = 0;
-    uint8_t last_byte = decrypted_data[file_size - 1];
-    for (int i = file_size - 1; i >= 0; i--) {
-        if (decrypted_data[i] == last_byte) {
-            padsize++;
-        } else {
-            // If we encounter a byte with a different value, stop counting
-            break;
-        }
-    }
-
-    // Write decrypted data to output file
-    fwrite(decrypted_data, sizeof(uint8_t), file_size-padsize, output_fp);
-    fclose(output_fp);
-
-    // Free allocated memory
-    free(encrypted_data);
-    free(decrypted_data);
 }
