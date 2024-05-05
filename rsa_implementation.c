@@ -1,4 +1,5 @@
 #include "rsa_implementation.h"
+#define CHUNK_SIZE 4096
 
 void rsa_encrypt_file(FILE *input_fp, const char *output_file)
 {
@@ -39,31 +40,37 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
     gmp_fprintf(private_key_fp, "%Zd\n%Zd\n", d, n);
     fclose(private_key_fp);
 
-    // Reads Message
-    char buffer[1024];
-    if (fgets(buffer, sizeof(buffer), input_fp) == NULL)
-    {
-        perror("Error reading message from file");
-        exit(EXIT_FAILURE);
-    }
-
-    // Convert Message to mpz_t number to apply encryption
-    for (size_t i = 0; i < strlen(buffer); i++)
-    {
-        mpz_mul_ui(message, message, 256);       // Shift left by 8 bits = to multiplying by 256)
-        mpz_add_ui(message, message, buffer[i]); // Add ASCII value of the character
-    }
-
-    // Encryption
-    mpz_powm(cipher, message, d, n);
-
     FILE *output_fp = fopen(output_file, "w");
     if (output_fp == NULL)
     {
         perror("Error opening output file");
         exit(EXIT_FAILURE);
     }
-    gmp_fprintf(output_fp, "%Zd\n", cipher);
+
+    // Reads Message line by line
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), input_fp) != NULL)
+    {
+        size_t len = strlen(buffer);
+        if (len > 0 && buffer[len-1] == '\n') {
+            buffer[len-1] = '\0'; 
+        }
+
+        mpz_set_ui(message, 0); 
+
+        // Convert Message to mpz_t number to apply encryption
+        for (size_t i = 0; i < strlen(buffer); i++)
+        {
+            mpz_mul_ui(message, message, 256);       // Shift left by 8 bits = to multiplying by 256)
+            mpz_add_ui(message, message, buffer[i]); // Add ASCII value of the character
+        }
+
+        // Encryption
+        mpz_powm(cipher, message, e, n); 
+
+        gmp_fprintf(output_fp, "%Zd\n", cipher);
+    }
+
     fclose(output_fp);
 
     mpz_clears(p, q, n, phi, e, d, message, cipher, NULL);
@@ -74,9 +81,7 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
     mpz_t d, n, cipher, decrypted_message;
     mpz_inits(d, n, cipher, decrypted_message, NULL);
 
-    
     // Reads the key from the file
-
     FILE *private_key_fp = fopen("private_key.txt", "r");
     if (private_key_fp == NULL)
     {
@@ -88,18 +93,7 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
         perror("Error reading private key from file");
         exit(EXIT_FAILURE);
     }
-
-    // Reads Message
-
-    if (gmp_fscanf(input_fp, "%Zd\n", cipher) != 1)
-    {
-        perror("Error reading encrypted message from file");
-        exit(EXIT_FAILURE);
-    }
-
-    // Decrypting
-
-    mpz_powm(decrypted_message, cipher, d, n);
+    fclose(private_key_fp);
 
     FILE *output_fp = fopen(output_file, "w");
     if (output_fp == NULL)
@@ -108,19 +102,30 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
         exit(EXIT_FAILURE);
     }
 
-    char decrypted_text[1024];
-    size_t index = 0;
-
-    // Convert Message to string
-    while (mpz_sgn(decrypted_message) > 0)
+    // Reads Message line by line
+    char buffer[1024];
+    while (fgets(buffer, sizeof(buffer), input_fp) != NULL)
     {
-        decrypted_text[index++] = mpz_fdiv_q_ui(decrypted_message, decrypted_message, 256); // Dviding by 256
-    }
-    decrypted_text[index] = '\0';
+        mpz_set_str(cipher, buffer, 10); 
 
-    // Reverses string
-    strrev(decrypted_text);
-    fprintf(output_fp, "%s\n", decrypted_text);
+        // Decrypting
+        mpz_powm(decrypted_message, cipher, d, n);
+
+        char decrypted_text[1024];
+        size_t index = 0;
+
+        // Convert Message to string
+        while (mpz_sgn(decrypted_message) > 0)
+        {
+            decrypted_text[index++] = mpz_fdiv_q_ui(decrypted_message, decrypted_message, 256); 
+        }
+        decrypted_text[index] = '\0';
+
+        // Reverses string
+        strrev(decrypted_text);
+        fprintf(output_fp, "%s\n", decrypted_text);
+    }
+
     fclose(output_fp);
 
     mpz_clears(d, n, cipher, decrypted_message, NULL);
