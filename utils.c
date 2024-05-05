@@ -24,6 +24,22 @@ uint8_t xtime(uint8_t x) {
     return (x & 0x80) ? ((x << 1) ^ 0x1B) : (x << 1);
 }
 
+uint8_t Multiply(uint8_t x, uint8_t y) {
+    uint8_t r = 0;
+    uint8_t bit;
+    for (bit = 0; bit < 8; bit++) {
+        if (y & 0x1) {
+            r ^= x;
+        }
+        bool high_bit_set = x & 0x80;
+        x <<= 1;
+        if (high_bit_set) {
+            x ^= 0x1b; // xtime
+        }
+        y >>= 1;
+    }
+    return r;
+}
 
 void compute_phi(mpz_t phi, mpz_t p, mpz_t q) {
     mpz_sub_ui(p, p, 1);

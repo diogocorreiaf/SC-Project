@@ -6,6 +6,10 @@
 #include "keys.h"
 #include "utils.h"
 
+#define NUM_ROUNDS 10
+#define AES_KEY_SIZE 16
+#define BLOCK_SIZE 16
+
 // Encryption Functions
 void SubBytes(uint8_t state[4][4]);
 void ShiftRows(uint8_t state[4][4]);
