@@ -193,8 +193,6 @@ void aes_encrypt_block(const uint8_t *plaintext_block, const uint8_t *key, uint8
             state[j][i] = plaintext_block[i * 4 + j];
         }
     }
-
-
     AddRoundKey(state, key);
 
     // First 9 rounds of AES encryption
