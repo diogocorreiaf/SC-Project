@@ -1,5 +1,8 @@
 #include "aes_implementation.h"
 
+
+// Constants used for AES encryption and decryption
+
 const uint8_t Rcon[10] = {
     0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1B, 0x36};
 
@@ -39,7 +42,11 @@ const uint8_t invSbox[256] = {
     0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
     0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d};
 
-void SubBytes(uint8_t state[4][4])
+
+
+
+// Replace each byte of the state matrix with the corresponding byte from the S-box
+void replaceBytes(uint8_t state[4][4])
 {
 
     for (int i = 0; i < 4; i++)
@@ -51,6 +58,8 @@ void SubBytes(uint8_t state[4][4])
     }
 }
 
+
+// Shifts the rows to the desired position
 void ShiftRows(uint8_t state[4][4])
 {
     uint8_t temp;
@@ -78,6 +87,7 @@ void ShiftRows(uint8_t state[4][4])
     state[3][0] = temp;
 }
 
+// Applies bitwise xors and muliplications 
 void MixColumns(uint8_t state[4][4])
 {
     uint8_t temp, tmp, tm;
@@ -101,9 +111,9 @@ void MixColumns(uint8_t state[4][4])
     }
 }
 
+// Xor operations on each byte with a round key
 void AddRoundKey(uint8_t state[4][4], const uint8_t *round_key)
 {
-    // XOR each byte of the state matrix with the corresponding byte of the round key
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -113,6 +123,7 @@ void AddRoundKey(uint8_t state[4][4], const uint8_t *round_key)
     }
 }
 
+// Shifts the rows to the desired position, the opposite of ShiftRows
 void InvShiftRows(uint8_t state[4][4])
 {
     uint8_t temp;
@@ -140,7 +151,8 @@ void InvShiftRows(uint8_t state[4][4])
     state[3][3] = temp;
 }
 
-void InvSubBytes(uint8_t state[4][4])
+// Replace each byte of the state matrix with the corresponding byte from the inverse S-box
+void inReplaceBytes(uint8_t state[4][4])
 {
     for (int i = 0; i < 4; i++)
     {
@@ -151,6 +163,7 @@ void InvSubBytes(uint8_t state[4][4])
     }
 }
 
+// Inverse of Mix Collumns
 void InvMixColumns(uint8_t state[4][4])
 {
     uint8_t a, b, c, d;
@@ -168,6 +181,7 @@ void InvMixColumns(uint8_t state[4][4])
     }
 }
 
+// Encryption algorithm for AES
 void aes_encrypt_block(const uint8_t *plaintext_block, const uint8_t *key, uint8_t *ciphertext_block)
 {
     // Create state matrix from plaintext block
@@ -180,24 +194,23 @@ void aes_encrypt_block(const uint8_t *plaintext_block, const uint8_t *key, uint8
         }
     }
 
-    // Initial Round Key Addition (AddRoundKey)
+
     AddRoundKey(state, key);
 
-    // Perform AES encryption rounds (excluding the last round)
+    // First 9 rounds of AES encryption
     for (int round = 1; round < 10; round++)
     {
-        SubBytes(state);
+        replaceBytes(state);
         ShiftRows(state);
         MixColumns(state);
-        AddRoundKey(state, key + round * 16); // Advance the key to the next round
+        AddRoundKey(state, key + round * 16);
     }
 
-    // Final round (without MixColumns)
-    SubBytes(state);
+    // Final round of AES encryption
+    replaceBytes(state);
     ShiftRows(state);
-    AddRoundKey(state, key + 10 * 16); // Use the last round key
+    AddRoundKey(state, key + 10 * 16);
 
-    // Copy the resulting ciphertext block from the state matrix
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -207,6 +220,8 @@ void aes_encrypt_block(const uint8_t *plaintext_block, const uint8_t *key, uint8
     }
 }
 
+
+// Decryption algorithm for AES
 void aes_decrypt_block(const uint8_t *ciphertext_block, const uint8_t *key, uint8_t *plaintext_block)
 {
     // Create state matrix from ciphertext block
@@ -219,24 +234,24 @@ void aes_decrypt_block(const uint8_t *ciphertext_block, const uint8_t *key, uint
         }
     }
 
-    // Initial Round Key Addition (AddRoundKey)
-    AddRoundKey(state, key + 160); // Use the last round key
+    
+    AddRoundKey(state, key + 160); 
 
-    // Perform AES decryption rounds (excluding the first round)
+    // First 9 rounds of AES decryption
     for (int round = 9; round > 0; round--)
     {
         InvShiftRows(state);
-        InvSubBytes(state);
+        inReplaceBytes(state);
         AddRoundKey(state, key + round * 16);
         InvMixColumns(state);
     }
 
-    // Final round (without InvMixColumns)
+    // Final round 
     InvShiftRows(state);
-    InvSubBytes(state);
+    inReplaceBytes(state);
     AddRoundKey(state, key);
 
-    // Copy the resulting plaintext block from the state matrix
+
     for (int i = 0; i < 4; i++)
     {
         for (int j = 0; j < 4; j++)
@@ -248,31 +263,29 @@ void aes_decrypt_block(const uint8_t *ciphertext_block, const uint8_t *key, uint
 
 void aes_encrypt_file(FILE *input_fp, const char *output_file)
 {
-    // Generate the key and write it to a file
+
     aes_key_gen("AESKey.bin");
 
-    // Read the key from the file
+    // Read the key and expand it
     FILE *keyFile = fopen("AESKey.bin", "rb");
     uint8_t key[16];
     fread(key, sizeof(uint8_t), 16, keyFile);
     fclose(keyFile);
 
-    // Define an array to store the expanded key
     uint8_t expandedKey[176]; // 11 * 16 bytes for AES-128
     aes_key_expansion(key, expandedKey, sbox, Rcon);
 
-    // Open the encrypted file
+
+
     FILE *encryptedFile = fopen(output_file, "wb");
 
-    // Define buffers for the message block and the cipher block
     uint8_t messageBlock[BLOCK_SIZE];
     uint8_t cipherBlock[BLOCK_SIZE];
 
-    // Encryption
     size_t bytesRead;
     while ((bytesRead = fread(messageBlock, sizeof(uint8_t), BLOCK_SIZE, input_fp)) > 0)
     {
-        // If we didn't read a full block, pad the rest of the block with PKCS#7 padding
+        // Padding if necessary
         if (bytesRead < BLOCK_SIZE)
         {
             uint8_t paddingSize = BLOCK_SIZE - bytesRead;
@@ -288,13 +301,12 @@ void aes_encrypt_file(FILE *input_fp, const char *output_file)
 
 void aes_decrypt_file(FILE *input_fp, const char *output_file)
 {
-    // Read the key from the file
+    // Read the key and expand it
     FILE *keyFile = fopen("AESKey.bin", "rb");
     uint8_t key[16];
     fread(key, sizeof(uint8_t), 16, keyFile);
     fclose(keyFile);
 
-    // Define an array to store the expanded key
     uint8_t expandedKey[176];
     aes_key_expansion(key, expandedKey, sbox, Rcon);
 
@@ -303,31 +315,27 @@ void aes_decrypt_file(FILE *input_fp, const char *output_file)
     long fileSize = ftell(input_fp);
     rewind(input_fp);
 
-    // Open the decrypted file
     FILE *decryptedFile = fopen(output_file, "wb");
 
-    // Define a buffer for the decrypted block
     uint8_t decryptedBlock[BLOCK_SIZE];
 
-    // Decryption
     long bytesWritten = 0;
     size_t bytesRead;
     while ((bytesRead = fread(decryptedBlock, sizeof(uint8_t), BLOCK_SIZE, input_fp)) > 0)
     {
         aes_decrypt_block(decryptedBlock, expandedKey, decryptedBlock);
 
-        // REMOVE PADDING IF LAST BLOCK
+        // remove padding if necessary
         if (ftell(input_fp) == fileSize)
         {
             int paddingSize = decryptedBlock[BLOCK_SIZE - 1];
             if (paddingSize < 0 || paddingSize > BLOCK_SIZE)
             {
-                // Handle invalid padding size
+                
                 printf("Invalid padding size.\n");
                 return;
             }
 
-            // Write the block to the file, excluding the padding
             fwrite(decryptedBlock, sizeof(uint8_t), BLOCK_SIZE - paddingSize, decryptedFile);
         }
         else

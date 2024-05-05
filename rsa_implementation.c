@@ -7,7 +7,7 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
     mpz_set_ui(e, 65537);
     int bits = 3330; // Number of bits to ensure that n = p * q has 1000 digits
 
-    // KEY GENERATION, i put it here because i was getting weird errors
+    // Generating the keys, i put it here because i was getting weird errors
 
     generate_large_primes(p, q, bits);
 
@@ -18,7 +18,7 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
 
     compute_mod_inverse(d, e, phi);
 
-    // WRITING THE KEYS
+    // Writes the keys to the files
 
     FILE *public_key_fp = fopen("public_key.txt", "w");
     if (public_key_fp == NULL)
@@ -29,6 +29,7 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
     gmp_fprintf(public_key_fp, "%Zd\n%Zd\n", e, n);
     fclose(public_key_fp);
 
+    // Reads the key from the file
     FILE *private_key_fp = fopen("private_key.txt", "w");
     if (private_key_fp == NULL)
     {
@@ -38,8 +39,8 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
     gmp_fprintf(private_key_fp, "%Zd\n%Zd\n", d, n);
     fclose(private_key_fp);
 
-    // READING MESSAGE
-    char buffer[1024]; // Buffer to store the text read from the file
+    // Reads Message
+    char buffer[1024];
     if (fgets(buffer, sizeof(buffer), input_fp) == NULL)
     {
         perror("Error reading message from file");
@@ -53,10 +54,9 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
         mpz_add_ui(message, message, buffer[i]); // Add ASCII value of the character
     }
 
-    // ENCRYPTION PROCESS
+    // Encryption
     mpz_powm(cipher, message, d, n);
 
-    // WRITE THE OUTPUT TO FILE
     FILE *output_fp = fopen(output_file, "w");
     if (output_fp == NULL)
     {
@@ -66,7 +66,6 @@ void rsa_encrypt_file(FILE *input_fp, const char *output_file)
     gmp_fprintf(output_fp, "%Zd\n", cipher);
     fclose(output_fp);
 
-    // VAR CLEARING
     mpz_clears(p, q, n, phi, e, d, message, cipher, NULL);
 }
 
@@ -75,7 +74,8 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
     mpz_t d, n, cipher, decrypted_message;
     mpz_inits(d, n, cipher, decrypted_message, NULL);
 
-    // READING KEY
+    
+    // Reads the key from the file
 
     FILE *private_key_fp = fopen("private_key.txt", "r");
     if (private_key_fp == NULL)
@@ -89,7 +89,7 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
         exit(EXIT_FAILURE);
     }
 
-    // READING MESSAGE
+    // Reads Message
 
     if (gmp_fscanf(input_fp, "%Zd\n", cipher) != 1)
     {
@@ -97,7 +97,7 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
         exit(EXIT_FAILURE);
     }
 
-    // DECRYPTION
+    // Decrypting
 
     mpz_powm(decrypted_message, cipher, d, n);
 
@@ -111,21 +111,17 @@ void rsa_decrypt_file(FILE *input_fp, const char *output_file)
     char decrypted_text[1024];
     size_t index = 0;
 
-    // CONVERT THE MESSAGE BACK TO STRING FROM AN mpz_t
+    // Convert Message to string
     while (mpz_sgn(decrypted_message) > 0)
     {
         decrypted_text[index++] = mpz_fdiv_q_ui(decrypted_message, decrypted_message, 256); // Dviding by 256
     }
     decrypted_text[index] = '\0';
 
-    // REVERSING THE STRING
+    // Reverses string
     strrev(decrypted_text);
-
-    // WRITING TO FILE
-
     fprintf(output_fp, "%s\n", decrypted_text);
     fclose(output_fp);
 
-    // VAR CLEARING
     mpz_clears(d, n, cipher, decrypted_message, NULL);
 }

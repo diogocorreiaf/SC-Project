@@ -184,7 +184,7 @@ uint32_t blowfish_Pbox[18] = {
     0x082efa98, 0xec4e6c89, 0x452821e6, 0x38d01377, 0xbe5466cf, 0x34e90c6c,
     0xc0ac29b7, 0xc97c50dd, 0x3f84d5b5, 0xb5470917, 0x9216d5d9, 0x8979fb1b};
 
-// BLOWFISH F FUNCTION
+// F function in Blowfish
 uint32_t F(uint32_t X)
 {
     uint8_t a, b, c, d;
@@ -205,7 +205,9 @@ uint32_t F(uint32_t X)
     return Y;
 }
 
-void blowfish_encrypt(uint32_t *xl, uint32_t *xr)
+
+
+void encryptWithBlowfish(uint32_t *xl, uint32_t *xr)
 {
     uint32_t Xl = *xl;
     uint32_t Xr = *xr;
@@ -230,7 +232,7 @@ void blowfish_encrypt(uint32_t *xl, uint32_t *xr)
     *xr = Xr;
 }
 
-void blowfish_decrypt(uint32_t *xl, uint32_t *xr)
+void decryptWithBlowfish(uint32_t *xl, uint32_t *xr)
 {
     uint32_t Xl = *xl, Xr = *xr;
     uint32_t temp;
@@ -240,13 +242,11 @@ void blowfish_decrypt(uint32_t *xl, uint32_t *xr)
         Xl ^= blowfish_Pbox[i];
         Xr = F(Xl) ^ Xr;
 
-        // Swap Xl and Xr
         temp = Xl;
         Xl = Xr;
         Xr = temp;
     }
 
-    // Swap Xl and Xr (undo the last swap)
     temp = Xl;
     Xl = Xr;
     Xr = temp;
@@ -266,10 +266,12 @@ void encrypt_file(FILE *plaintext_file, FILE *ciphertext_file, size_t plaintext_
     size_t bytes_left = plaintext_size;
 
     while (bytes_left > 0)
-    {
+    {   
+        // Number of bytes to read in case padding is needed
         size_t bytes_to_read = (bytes_left >= BLOCK_SIZE) ? BLOCK_SIZE : bytes_left;
         size_t bytes_read = fread(plaintext_buffer, 1, bytes_to_read, plaintext_file);
 
+        // Apply padding if necessary
         if (bytes_read < BLOCK_SIZE)
         {
             uint8_t paddingSize = BLOCK_SIZE - bytes_read;
@@ -279,7 +281,7 @@ void encrypt_file(FILE *plaintext_file, FILE *ciphertext_file, size_t plaintext_
         uint32_t xl = *((uint32_t *)plaintext_buffer);
         uint32_t xr = *((uint32_t *)(plaintext_buffer + sizeof(uint32_t)));
 
-        blowfish_encrypt(&xl, &xr);
+        encryptWithBlowfish(&xl, &xr);
 
         *((uint32_t *)ciphertext_buffer) = xl;
         *((uint32_t *)(ciphertext_buffer + sizeof(uint32_t))) = xr;
@@ -298,18 +300,20 @@ void decrypt_file(FILE *ciphertext_file, FILE *decrypted_file, size_t ciphertext
     size_t bytes_left = ciphertext_size;
 
     while (bytes_left > 0)
-    {
+    {  
+        // Number of bytes to read from the next block
         size_t bytes_to_read = (bytes_left >= BLOCK_SIZE) ? BLOCK_SIZE : bytes_left;
         size_t bytes_read = fread(ciphertext_buffer, 1, bytes_to_read, ciphertext_file);
 
         uint32_t xl = *((uint32_t *)ciphertext_buffer);
         uint32_t xr = *((uint32_t *)(ciphertext_buffer + sizeof(uint32_t)));
 
-        blowfish_decrypt(&xl, &xr);
+        decryptWithBlowfish(&xl, &xr);
 
         *((uint32_t *)decrypted_buffer) = xl;
         *((uint32_t *)(decrypted_buffer + sizeof(uint32_t))) = xr;
 
+        // If this is the last block remove the padding
         if (bytes_left == bytes_read)
         {
             int paddingSize = decrypted_buffer[BLOCK_SIZE - 1];
@@ -324,13 +328,13 @@ void decrypt_file(FILE *ciphertext_file, FILE *decrypted_file, size_t ciphertext
     }
 }
 
+// Modifies the Pbox and Sbox for the Blowfish Algorithm
 void initializeBlowfish(const uint8_t *key, size_t key_length)
 {
     int i, j;
     uint32_t data = 0x00000000;
     size_t key_index = 0;
 
-    /* XOR key with P-array */
     for (i = 0; i < 18; i++)
     {
         data = (data << 8) | key[key_index++];
@@ -341,33 +345,30 @@ void initializeBlowfish(const uint8_t *key, size_t key_length)
 
     uint32_t l = 0x00000000, r = 0x00000000;
 
-    /* Encrypt initial value with the Blowfish algorithm */
     for (i = 0; i < 18; i += 2)
     {
-        blowfish_encrypt(&l, &r);
+        encryptWithBlowfish(&l, &r);
         blowfish_Pbox[i] = l;
         blowfish_Pbox[i + 1] = r;
     }
 
-    /* Update S-boxes */
     for (i = 0; i < 4; i++)
     {
         for (j = 0; j < 256; j += 2)
         {
-            blowfish_encrypt(&l, &r);
+            encryptWithBlowfish(&l, &r);
             blowfish_Sbox[i][j] = l;
             blowfish_Sbox[i][j + 1] = r;
         }
     }
 }
 
-// Perform Blowfish encryption on plaintext
 void blowfish_encrypt_file(FILE *input_fp, const char *output_file)
 {
     int key_size;
-    // READING THE KEYS
     blowfish_key_gen("BlowfishKey.bin");
 
+    // Reads the keys
     FILE *key_file = fopen("BlowfishKey.bin", "rb");
     if (key_file == NULL)
     {
@@ -379,6 +380,8 @@ void blowfish_encrypt_file(FILE *input_fp, const char *output_file)
     fread(key, 1, key_size, key_file);
 
     fclose(key_file);
+
+    // Initializes the Blowfish Algorithm by modifying the Pbox and Sbox
     initializeBlowfish(key, key_size);
 
     fseek(input_fp, 0, SEEK_END);
@@ -397,11 +400,10 @@ void blowfish_encrypt_file(FILE *input_fp, const char *output_file)
     fclose(output_fp);
 }
 
-// Perform Blowfish decryption on ciphertext
 void blowfish_decrypt_file(FILE *input_fp, const char *output_file)
 {
     int key_size;
-    // Read key from key file
+    // Reads the keys
     FILE *key_file = fopen("BlowfishKey.bin", "rb");
     if (key_file == NULL)
     {
@@ -411,9 +413,11 @@ void blowfish_decrypt_file(FILE *input_fp, const char *output_file)
 
     uint8_t key[key_size];
     fclose(key_file);
+
+    // Initializes the Blowfish Algorithm by modifying the Pbox and Sbox
     initializeBlowfish(key, key_size);
 
-    // Determine ciphertext file size
+    // Determine the file size
     fseek(input_fp, 0, SEEK_END);
     size_t ciphertext_size = ftell(input_fp);
     fseek(input_fp, 0, SEEK_SET);
