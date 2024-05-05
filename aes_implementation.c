@@ -231,8 +231,6 @@ void aes_decrypt_block(const uint8_t *ciphertext_block, const uint8_t *key, uint
             state[j][i] = ciphertext_block[i * 4 + j];
         }
     }
-
-    
     AddRoundKey(state, key + 160); 
 
     // First 9 rounds of AES decryption
@@ -270,7 +268,7 @@ void aes_encrypt_file(FILE *input_fp, const char *output_file)
     fread(key, sizeof(uint8_t), 16, keyFile);
     fclose(keyFile);
 
-    uint8_t expandedKey[176]; // 11 * 16 bytes for AES-128
+    uint8_t expandedKey[176];
     aes_key_expansion(key, expandedKey, sbox, Rcon);
 
 
